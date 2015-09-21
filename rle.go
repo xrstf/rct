@@ -24,7 +24,7 @@ func (d *dummy) Decode(file *os.File) ([]byte, error) {
 
 	size := len(content)
 	end := 0
-	result := make([]byte, 0, 2065676)
+	result := make([]byte, 0, SaveStateSize)
 
 	for pos := 0; pos < (size - 4); { // -4 to ignore the trailing checksum
 		cmd := content[pos]
@@ -39,7 +39,7 @@ func (d *dummy) Decode(file *os.File) ([]byte, error) {
 
 			pos = end
 		} else {
-			next := content[pos+1]
+			next := content[pos]
 
 			result = append(result, bytes.Repeat([]byte{next}, int(byte(1)-cmd))...)
 
