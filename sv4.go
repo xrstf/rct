@@ -41,6 +41,61 @@ type report struct {
 	LoanInterest     int32
 }
 
+type bannerMenu struct {
+	Standard bool
+	Jungle   bool
+	Roman    bool
+	Egyptian bool
+	Mining   bool
+	Jurassic bool
+	Asian    bool
+	Snow     bool
+	Space    bool
+}
+
+type researchOptions struct {
+	Rollercoasters   bool
+	ThrillRides      bool
+	GentleRides      bool
+	Shops            bool
+	Theming          bool
+	RideImprovements bool
+}
+
+type researchTask struct {
+	Item     byte
+	Ride     byte
+	Category byte
+	Flags    byte
+}
+
+type scenarioGoalType uint8
+
+const (
+	GoalGuestsAndRating scenarioGoalType = iota
+	ParkValue
+	HaveFun
+	Competition
+	TenCoasters6Excitement
+	Maintain
+	MonthlyRideIncome
+	TenCoasters7Excitement
+	FiveCoasters
+)
+
+type scenarioGoal struct {
+	Type  scenarioGoalType
+	Years uint8
+
+	// set one of them, never both
+	MoneyGoal         uint32
+	CoasterExcitement uint32
+
+	// set one of them, never both
+	GuestGoal        uint16
+	MinCoasterLength uint16
+}
+
 type SaveState struct {
 	Month time.Month
 	Year  int
@@ -118,11 +173,31 @@ type SaveState struct {
 
 	Reports []report
 
-	ColorHandymen byte
+	ColorHandymen  byte
 	ColorMechanics byte
-	ColorSecurity byte
+	ColorSecurity  byte
 
 	sceneryMenu []byte
+
+	BannerMenu bannerMenu
+
+	ParkRating        uint16
+	ParkRatingHistory []uint8
+	ParkGuestHistory  []uint8
+
+	ResearchOptions  researchOptions
+	ResearchProgress byte
+	LastResearch     researchTask
+	NextResearch     researchTask
+
+	OwnedLand uint16
+
+	MaxLoan uint32
+
+	PocketCashBase int16
+	HungerBase     uint8
+	ThirstBase     uint8
+	ScenarioGoal   scenarioGoal
 }
 
 type sv4parser struct {
@@ -278,8 +353,6 @@ func (p *sv4parser) Parse() (*SaveState, error) {
 	// part financial reports
 	save.Reports = make([]report, 16)
 
-	p.where()
-
 	for i := 0; i < len(save.Reports); i = i + 1 {
 		r := &save.Reports[i]
 
@@ -310,11 +383,110 @@ func (p *sv4parser) Parse() (*SaveState, error) {
 	// scenery menu
 	save.sceneryMenu = p.consumeBytes(128)
 
+	// banner menu
+	bannerFlags := p.consumeUint16()
+
+	save.BannerMenu.Standard = bannerFlags&0x1 > 0
+	save.BannerMenu.Jungle = bannerFlags&0x2 > 0
+	save.BannerMenu.Roman = bannerFlags&0x4 > 0
+	save.BannerMenu.Egyptian = bannerFlags&0x8 > 0
+	save.BannerMenu.Mining = bannerFlags&0x10 > 0
+	save.BannerMenu.Jurassic = bannerFlags&0x20 > 0
+	save.BannerMenu.Asian = bannerFlags&0x40 > 0
+	save.BannerMenu.Snow = bannerFlags&0x80 > 0
+	save.BannerMenu.Space = bannerFlags&0x100 > 0
+
+	// ???
+	p.consumeBytes(94)
+
+	// park rating
+	save.ParkRating = p.consumeUint16()
+	save.ParkRatingHistory = []uint8(p.consumeBytes(32))
+	save.ParkGuestHistory = []uint8(p.consumeBytes(32))
+
+	// research options
+	rFlags := p.consumeByte()
+
+	save.ResearchOptions.Rollercoasters = rFlags&0x1 > 0
+	save.ResearchOptions.ThrillRides = rFlags&0x2 > 0
+	save.ResearchOptions.GentleRides = rFlags&0x4 > 0
+	save.ResearchOptions.Shops = rFlags&0x8 > 0
+	save.ResearchOptions.Theming = rFlags&0x10 > 0
+	save.ResearchOptions.RideImprovements = rFlags&0x20 > 0
+
+	save.ResearchProgress = p.consumeByte()
+	save.LastResearch = researchTask{
+		p.consumeByte(),
+		p.consumeByte(),
+		p.consumeByte(),
+		p.consumeByte(),
+	}
+
+	// skip research items for now
+	p.consumeBytes(1000)
+
+	save.NextResearch = researchTask{
+		p.consumeByte(),
+		p.consumeByte(),
+		p.consumeByte(),
+		p.consumeByte(),
+	}
+
+	// ???
+	p.consumeBytes(6)
+
+	// Cheat detection: count of owned land
+	save.OwnedLand = p.consumeUint16()
+
+	// ???
+	p.consumeBytes(4)
+
+	// Max loan amount
+	save.MaxLoan = p.consumeUint32()
+
+	save.PocketCashBase = p.consumeInt16()
+	save.HungerBase = p.consumeUint8()
+	save.ThirstBase = p.consumeUint8()
+
+	// scenario goal
+	scGoal := p.consumeByte()
+
+	save.ScenarioGoal.Type = scenarioGoalType(scGoal)
+	save.ScenarioGoal.Years = p.consumeUint8()
+
+	p.consumeBytes(2)
+
+	if save.ScenarioGoal.Type == FiveCoasters {
+		save.ScenarioGoal.CoasterExcitement = p.consumeUint32()
+	} else {
+		save.ScenarioGoal.MoneyGoal = p.consumeUint32()
+	}
+
+	if save.ScenarioGoal.Type == TenCoasters7Excitement {
+		save.ScenarioGoal.MinCoasterLength = p.consumeUint16()
+	} else {
+		save.ScenarioGoal.GuestGoal = p.consumeUint16()
+	}
+
+	// 00 00 00 00 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 | 00000000ff00 | dynamite dunes, noch 6 wochen
+	// 82 00 00 00 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 | ff000000ff00 | + freier eintritt für 2 wochen
+	// 82 00 00 00 06 84 00 00 00 00 00 00 00 00 00 00 00 00 00 00 | ff000000ff0e | + minieisenbahn für 4 wochen
+	// 82 00 00 82 06 84 00 00 00 00 00 00 00 00 00 00 00 00 00 00 | ff000006ff0e | + free hamburger für 2 wochen
+	// 82 83 00 82 06 84 00 00 00 00 00 00 00 00 00 00 00 00 00 00 | ff180006ff0e | + free gokarts für 3 wochen
+
+	fmt.Printf("%x\n", p.consumeBytes(20))
+	fmt.Printf("%x\n", p.consumeBytes(6))
+
+	// ???
+	p.consumeBytes(16)
+
+	p.where()
+
 	return save, nil
 }
 
 func (p *sv4parser) where() {
-	fmt.Printf("position = %X\n", p.pos)
+	fmt.Printf("current position = 0x%X\n", p.pos)
 }
 
 func (p *sv4parser) consumeByte() byte {
@@ -327,8 +499,25 @@ func (p *sv4parser) consumeBytes(num int) []byte {
 	return p.data[p.pos:(p.pos + num)]
 }
 
+func (p *sv4parser) consumeUint8() uint8 {
+	return uint8(p.consumeByte())
+}
+
 func (p *sv4parser) consumeUint16() uint16 {
 	return binary.LittleEndian.Uint16(p.consumeBytes(2))
+}
+
+func (p *sv4parser) consumeInt16() int16 {
+	b := p.consumeBytes(2)
+	buf := bytes.NewReader(b)
+	result := int16(0)
+
+	err := binary.Read(buf, binary.LittleEndian, &result)
+	if err != nil {
+		fmt.Println("binary.Read failed:", err)
+	}
+
+	return result
 }
 
 func (p *sv4parser) consumeUint32() uint32 {

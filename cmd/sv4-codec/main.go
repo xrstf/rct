@@ -9,14 +9,24 @@ import (
 )
 
 func main() {
-	file, err := os.Open("test.sv4") // For read access.
+	if len(os.Args) < 2 {
+		log.Fatal("No filename given.")
+	}
+
+	// for {
+	file, err := os.Open(os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
 
 	decoder := rct.NewRLEDecoder()
-	result, err := decoder.Decode(file)
+	result, _ := decoder.Decode(file)
 
-	fmt.Print(string(result))
+	saveState, _ := rct.ParseSaveState(result)
+
+	fmt.Printf("save state = %+v\n", saveState)
+
+	file.Close()
+	// 	<-time.After(1 * time.Second)
+	// }
 }
