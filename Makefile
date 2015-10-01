@@ -1,8 +1,2 @@
-default: build
-
-build: fix
-	go build -v .
-
-fix: *.go
-	goimports -l -w .
-	gofmt -l -w .
+doc:
+	godoc -http=:3000
