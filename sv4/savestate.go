@@ -18,6 +18,8 @@ import (
 	"errors"
 	"strconv"
 	"time"
+
+	"github.com/xrstf/rct/utils"
 )
 
 // All savestates are fixed-sized bytes slices, only their RLE encoded files vary in size.
@@ -29,7 +31,7 @@ var DaysInMonth = []int{31, 30, 31, 30, 31, 31, 30, 31}
 
 // A SaveState contains all information the game needs to restore a session.
 type SaveState struct {
-	data []byte
+	data *utils.ByteSlice
 }
 
 type SaveStateType int32
@@ -91,11 +93,13 @@ type scenarioGoal struct {
 // Use the RLE decoder to uncompress before handing the raw data to this function.
 // The function errors out if state is of the wrong length.
 func NewSaveState(state []byte) (*SaveState, error) {
-	s := &SaveState{state}
+	s := &SaveState{nil}
 
 	if len(state) != SaveStateSize {
 		return s, errors.New("Save states must be exactly " + strconv.Itoa(SaveStateSize) + " bytes in size.")
 	}
+
+	s.data = utils.NewByteSlice(state)
 
 	return s, nil
 }
