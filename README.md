@@ -4,7 +4,7 @@ Rollercoaster Tycoon for Go
 This is a collection of libraries to read (and sometimes write) data files and savestates from
 RCT 1. It's a pure fun project, incomplete and probably buggy.
 
-The code is tested using RCT1 Deluxe Edition, as it's available on gog.com.
+The code is tested using RCT1 Deluxe Edition, as it's [available on gog.com](http://www.gog.com/game/rollercoaster_tycoon_deluxe).
 
 Sources
 -------
