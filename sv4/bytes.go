@@ -1,3 +1,5 @@
+// Copyright (c) 2015, xrstf | MIT licensed
+
 package sv4
 
 import (

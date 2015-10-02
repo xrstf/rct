@@ -1,3 +1,5 @@
+// Copyright (c) 2015, xrstf | MIT licensed
+
 //go:generate stringer -type=SaveStateType,scenarioGoalType,ParkFlag -output=savestate_strings.go
 
 // Package sv4 implements an API to read/write savestates.

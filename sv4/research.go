@@ -1,3 +1,5 @@
+// Copyright (c) 2015, xrstf | MIT licensed
+
 //go:generate stringer -type=ResearchRate,ResearchFlag -output=research_strings.go
 
 package sv4
