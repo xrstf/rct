@@ -1,5 +1,7 @@
 // Copyright (c) 2015, xrstf | MIT licensed
 
+//go:generate stringer -type=ElementType -output=index_strings.go
+
 package csg
 
 import (
