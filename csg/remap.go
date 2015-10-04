@@ -1,0 +1,116 @@
+// Copyright (c) 2015, xrstf | MIT licensed
+
+package csg
+
+import (
+	"errors"
+	"fmt"
+	"image/color"
+	"strings"
+
+	"github.com/xrstf/rct/utils"
+)
+
+type RemapPalette struct {
+	DisplayColor color.RGBA
+	Palette      Palette
+}
+
+type RemapSet struct {
+	First  RemapPalette
+	Second RemapPalette
+	Third  RemapPalette
+}
+
+func NewRemapSet(first int, second int, third int) (RemapSet, error) {
+	set := RemapSet{}
+	lastIdx := len(RemapPalettes) - 1
+
+	if first < 0 || first > lastIdx {
+		return set, errors.New("First remap color is out of range.")
+	}
+
+	if second < 0 || second > lastIdx {
+		return set, errors.New("Second remap color is out of range.")
+	}
+
+	if third < 0 || third > lastIdx {
+		return set, errors.New("Third remap color is out of range.")
+	}
+
+	set.First = RemapPalettes[first]
+	set.Second = RemapPalettes[second]
+	set.Third = RemapPalettes[third]
+
+	return set, nil
+}
+
+// taken from https://github.com/LinusU/node-rct1-remap-colors/blob/master/index.js
+
+var RemapPalettes = []RemapPalette{
+	decodeRemapPalette("000000 000000 000000 000000 232D2E 344142 455354 576566 657576 758586 889495 9BA7A7 435050"), // 0
+	decodeRemapPalette("000000 344142 455354 576566 657576 758586 889495 9BA7A7 B3BCBD C7CDCE DDE2E2 F3F5F6 879191"),
+	decodeRemapPalette("000000 657576 758586 889495 9BA7A7 B3BCBD C7CDCE DDE2E2 F3F5F6 F3F5F6 F3F5F6 F3F5F6 C2CBCB"),
+	decodeRemapPalette("000000 363C69 444A79 525889 67699C 7779AA 8B8DBC 9D9FCA AFB1D7 C4C6E5 DCDDF2 F3F3FF 868CBC"),
+	decodeRemapPalette("000000 512685 5A2D90 663D9F 724AAA 825EB8 8F71C6 A184D0 B199DE C4B1EB DBD1F5 F4F0FF 896DBD"),
+	decodeRemapPalette("000000 142D81 142D81 1F3EA6 1F3EA6 284BB4 284BB4 284BB4 345CC6 345CC6 436CD3 436CD3 3258BC"), // 5
+	decodeRemapPalette("000000 1F3EA6 284BB4 345CC6 436CD3 557FE4 6F9BE7 87B2EB 9FC7F1 B4DAF5 CBEAFC E6F8FF 6C9BE4"),
+	decodeRemapPalette("000000 284D47 305A54 376661 447A76 538D8A 65A0A0 7CB2B2 92C3C7 ABD5D8 C9E9EC E4FDFF 5F9DA0"),
+	decodeRemapPalette("000000 2C4C02 2C4C02 2C4C02 396004 457407 53870B 609912 6EA725 7DB539 8EC353 9ED06D 51840A"),
+	decodeRemapPalette("000000 27431E 35552A 426239 51724C 5F825E 739573 87A78A 9CB99D B2CEB6 C8DFCE E0F3E6 739573"),
+	decodeRemapPalette("000000 394D1F 495E2A 576E35 657E3A 768D44 829B4E 90A657 9FB460 ADC268 BCCF75 CCDD7D 809B42"), // 10
+	decodeRemapPalette("000000 396004 457407 53870B 609912 6EA725 7DB539 8EC353 9ED06D B3DE88 C6ECA2 DCFAC1 79B430"),
+	decodeRemapPalette("000000 46562F 536339 647348 737F55 889663 9FAB73 B4C084 C9D493 D3DEA5 DDE9B7 EAF6CC 9AAB73"),
+	decodeRemapPalette("000000 4E4A03 605B10 6D6C1C 7D7C2C 8A8B40 999A4E A8A864 B7BA74 C7C888 D5D69E E6E6B4 949742"),
+	decodeRemapPalette("000000 663D03 7D5307 93680F A98314 BF9D1E D4B526 ECD331 F9E847 FBF277 FDF9A3 FFFDCF CFB421"),
+	decodeRemapPalette("000000 4E2801 4E2801 4E2801 663D03 7D5307 93680F A98314 BF9D1E D4B526 ECD331 F9E847 92660A"), // 15
+	decodeRemapPalette("000000 754705 935709 AE620D C96E10 E27514 E58C28 E9A247 EDB665 F0C681 F4D59B F7E2B4 E58C20"),
+	decodeRemapPalette("000000 754705 754705 935709 935709 AE620D AE620D AE620D C96E10 C96E10 E27514 E27514 A9610C"),
+	decodeRemapPalette("000000 624C0F 795E21 886B2C 967736 A48745 B59657 C1A86C CEBC84 DDD09A E9E1B3 F7F1CF B29352"),
+	decodeRemapPalette("000000 4E3907 4E3907 4E3907 624C0F 795E21 886B2C 967736 A48745 B59657 C1A86C CEBC84 886B2C"),
+	decodeRemapPalette("000000 523E13 523E13 523E13 67512A 786643 887A5E 9C927F AEA492 C3B9A5 D5CEBA E9E2CF 807952"), // 20
+	decodeRemapPalette("000000 6C4A25 7F5C3A 916D4D A77A56 B88A67 C89978 D1AA87 DDBB96 E8CCA9 F0D9BA F9E9CF C89774"),
+	decodeRemapPalette("000000 541401 621C07 712613 7F3325 8D4135 9E574D AD6B62 BF827B CD9892 E0B4AF F2CECB 9B5340"),
+	decodeRemapPalette("000000 5B1701 5B1701 732003 732003 8B2805 8B2805 8B2805 A03007 A03007 B6380A B6380A 8B2805"),
+	decodeRemapPalette("000000 5B1701 732003 8B2805 A03007 B6380A CA400D DE4710 E27457 E79887 EFBEB3 F8E4DF C73E11"),
+	decodeRemapPalette("000000 5F1B33 77254B 8E305D A73B76 B74B8A C864A0 D980B9 DF97C7 E7B0D5 EFCAE5 F7E2F2 C060A0"), // 25
+	decodeRemapPalette("000000 8D4135 9E574D AD6B62 BF827B CD9892 E0B4AF F2CECB F2CECB F2CECB F2CECB F2CECB D9B3AF"),
+	decodeRemapPalette("000000 5F1B33 5F1B33 77254B 77254B 8E305D 8E305D 8E305D A73B76 A73B76 B74B8A B74B8A 8B2E51"),
+	decodeRemapPalette("000000 363C69 363C69 444A79 444A79 525889 525889 525889 67699C 67699C 7779AA 7779AA 515482"),
+	decodeRemapPalette("000000 447A76 538D8A 65A0A0 7CB2B2 92C3C7 ABD5D8 C9E9EC E4FDFF E4FDFF E4FDFF E4FDFF A9D5D8"),
+	decodeRemapPalette("000000 93680F A98314 BF9D1E D4B526 ECD331 F9E847 FBF277 FDF9A3 FFFDCF FFFDCF FFFDCF F9E847"), // 30
+	decodeRemapPalette("000000 436CD3 557FE4 6F9BE7 87B2EB 9FC7F1 B4DAF5 CBEAFC E6F8FF E6F8FF E6F8FF E6F8FF B3D7F2"),
+}
+
+func readColor(data *utils.ByteSlice) color.RGBA {
+	return color.RGBA{
+		data.ConsumeUint8(),
+		data.ConsumeUint8(),
+		data.ConsumeUint8(),
+		255,
+	}
+}
+
+func decodeRemapPalette(input string) RemapPalette {
+	remap := RemapPalette{}
+	data := utils.NewByteSlice(strToByteSlice(input))
+	numColors := 12
+
+	remap.Palette = make(Palette)
+
+	for i := 0; i < numColors; i++ {
+		remap.Palette[byte(i)] = readColor(data)
+	}
+
+	remap.DisplayColor = readColor(data)
+
+	return remap
+}
+
+func strToByteSlice(str string) []byte {
+	result := make([]byte, 0)
+
+	fmt.Sscanf(strings.Replace(str, " ", "", -1), "%x", &result)
+
+	return result
+}

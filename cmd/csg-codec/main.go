@@ -45,8 +45,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	remapSet, _ := csg.NewRemapSet(24, 30, 2)
+
 	encoder := png.Encoder{png.BestCompression}
-	err = encoder.Encode(out, bitmap.ToImage(palette))
+	err = encoder.Encode(out, bitmap.ToImage(palette, remapSet))
 	if err != nil {
 		log.Fatal(err)
 	}

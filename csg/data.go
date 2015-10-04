@@ -4,6 +4,7 @@ package csg
 
 import (
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"io/ioutil"
@@ -14,13 +15,24 @@ import (
 
 type Palette map[byte]color.RGBA
 
+func (p *Palette) String() {
+	for key, rgb := range *p {
+		fmt.Printf("[0x%02X] = {0x%02X, 0x%02X, 0x%02X}\n", key, rgb.R, rgb.G, rgb.B)
+	}
+}
+
+func (p *Palette) Color(key byte) (color.RGBA, bool) {
+	color, exists := (*p)[key]
+	return color, exists
+}
+
 type Bitmap struct {
 	Width  uint16
 	Height uint16
 	Pixels []byte
 }
 
-func (self *Bitmap) ToImage(palette *Palette) image.Image {
+func (self *Bitmap) ToImage(palette *Palette, remapping RemapSet) image.Image {
 	width := int(self.Width)
 	height := int(self.Height)
 	img := image.NewNRGBA(image.Rectangle{
@@ -31,10 +43,19 @@ func (self *Bitmap) ToImage(palette *Palette) image.Image {
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			key := self.Pixels[y*width+x]
+			rgb := color.RGBA{}
+			exists := true
 
-			color, exists := (*palette)[key]
+			if key >= 0xCA && key <= 0xD5 {
+				rgb = remapping.Second.Palette[key-0xCA]
+			} else if key >= 0xF3 && key <= 0xFE {
+				rgb = remapping.First.Palette[key-0xF3]
+			} else {
+				rgb, exists = palette.Color(key)
+			}
+
 			if exists {
-				img.Set(x, y, color)
+				img.Set(x, y, rgb)
 			}
 		}
 	}
