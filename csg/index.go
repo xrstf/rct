@@ -28,25 +28,49 @@ type IndexStruct struct {
 	Type         ElementType
 }
 
+type Index struct {
+	Elements []IndexStruct
+}
+
+func (self *Index) Bitmaps() []IndexStruct {
+	return self.filter(DirectBitmapType | CompactedBitmapType)
+}
+
+func (self *Index) Palettes() []IndexStruct {
+	return self.filter(PaletteType)
+}
+
+func (self *Index) filter(t ElementType) []IndexStruct {
+	result := make([]IndexStruct, 0)
+
+	for _, element := range self.Elements {
+		if element.Type&t > 0 {
+			result = append(result, element)
+		}
+	}
+
+	return result
+}
+
 type IndexDecoder struct{}
 
 func NewIndexDecoder() *IndexDecoder {
 	return &IndexDecoder{}
 }
 
-func (d *IndexDecoder) DecodeFile(file *os.File) ([]IndexStruct, error) {
+func (d *IndexDecoder) DecodeFile(file *os.File) (Index, error) {
 	content, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, err
+		return Index{}, err
 	}
 
 	return d.Decode(content)
 }
 
-func (d *IndexDecoder) Decode(index []byte) ([]IndexStruct, error) {
-	elements := len(index) / 16
+func (d *IndexDecoder) Decode(data []byte) (Index, error) {
+	elements := len(data) / 16
 	result := make([]IndexStruct, 0, elements)
-	input := utils.NewByteSlice(index)
+	input := utils.NewByteSlice(data)
 
 	for input.At() < input.Size() {
 		result = append(result, IndexStruct{
@@ -62,5 +86,5 @@ func (d *IndexDecoder) Decode(index []byte) ([]IndexStruct, error) {
 		input.Skip(3)
 	}
 
-	return result, nil
+	return Index{result}, nil
 }
